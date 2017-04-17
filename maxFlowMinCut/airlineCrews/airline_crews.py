@@ -175,11 +175,6 @@ class MaxMatching:
                 if edge.flow > 0:
                     matching[i] = edge.v -n -1
 
-
-
-
-
-
         return matching
 
     def solve(self):
