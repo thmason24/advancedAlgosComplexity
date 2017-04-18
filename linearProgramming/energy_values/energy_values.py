@@ -59,7 +59,13 @@ def ProcessPivotElement(a, b, pivot_element):
     			b[rowInd] = b[rowInd]/scaleFactor
     			row = [a - b for a, b in zip(row, a[pivot_element.row])]
     			b[rowInd] = b[rowInd] - b[pivot_element.row]
+    			
     			a[rowInd] = row
+    			#rescale row by it's index to make it's primary number 1
+    			reScale = a[rowInd][rowInd]
+    			a[rowInd] = [i/reScale for i in a[rowInd]]
+    			b[rowInd] = b[rowInd]/reScale
+    			#a[rowInd] = row
 
 def MarkPivotElementUsed(pivot_element, used_rows, used_columns):
     used_rows[pivot_element.row] = True
@@ -87,7 +93,7 @@ def SolveEquation(equation):
         ProcessPivotElement(a, b, pivot_element)
         #print('a after process')
         #printA(a,b)
-        
+        #print()
         MarkPivotElementUsed(pivot_element, used_rows, used_columns)
 
     return b
