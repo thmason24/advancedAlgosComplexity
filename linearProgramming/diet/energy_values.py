@@ -12,6 +12,7 @@ class Position:
     def __init__(self, column, row):
         self.column = column
         self.row = row
+        self.valid = True
 
 def ReadEquation():
     size = int(input())
@@ -27,19 +28,25 @@ def SelectPivotElement(a, used_rows, used_columns):
 	# This algorithm selects the first free element.
 	# You'll need to improve it to pass the problem.
 	pivot_element = Position(0, 0)
-    
+	#print('test2')
     #find leftmost non zero which is unused
 	while used_rows[pivot_element.row]:
 		pivot_element.row += 1	
 	while used_columns[pivot_element.column]:
 		pivot_element.column += 1	
 	#get first non zero value among unused rows
-	print('pivot')
-	print(pivot_element.row)
-	print(pivot_element.column)
-	
+	#print(a)
+	#print(pivot_element.row)
+	#print(pivot_element.column)
 	while a[pivot_element.row][pivot_element.column] == 0:
-		pivot_element.row += 1
+		#print('test4')
+		if pivot_element.row < len(a)-1:
+			pivot_element.row += 1
+		else:
+			pivot_element.valid = False
+			break
+		#print(pivot_element.row)
+		#print(pivot_element.column)
 		
 	return pivot_element
 
@@ -88,6 +95,9 @@ def SolveEquation(equation):
     used_rows = [False] * size
     for step in range(size):
         pivot_element = SelectPivotElement(a, used_rows, used_columns)
+        if not pivot_element.valid:
+        	print('test3')
+        	return [0, False] #return false validity
         #print('pivot element : ' + str(pivot_element.row) + ' '  + str(pivot_element.column))
         #print('a before swap')
         #printA(a,b)
@@ -100,7 +110,7 @@ def SolveEquation(equation):
         #print()
         MarkPivotElementUsed(pivot_element, used_rows, used_columns)
 
-    return b
+    return [b, True]  #return b and validity
 
 def PrintColumn(column):
     size = len(column)
