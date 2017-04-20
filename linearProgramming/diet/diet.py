@@ -1,7 +1,131 @@
 # python3
 from sys import stdin
-import energy_values as ge #import as gaussian elimination
+from scipy.optimize import linprog
+import numpy as np
 import copy
+
+
+class Equation:
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+class Position:
+    def __init__(self, column, row):
+        self.column = column
+        self.row = row
+        self.valid = True
+
+def ReadEquation():
+    size = int(input())
+    a = []
+    b = []
+    for row in range(size):
+        line = list(map(float, input().split()))
+        a.append(line[:size])
+        b.append(line[size])
+    return Equation(a, b)
+
+def SelectPivotElement(a, used_rows, used_columns):
+	# This algorithm selects the first free element.
+	# You'll need to improve it to pass the problem.
+	pivot_element = Position(0, 0)
+	#print('test2')
+    #find leftmost non zero which is unused
+	while used_rows[pivot_element.row]:
+		pivot_element.row += 1	
+	while used_columns[pivot_element.column]:
+		pivot_element.column += 1	
+	#get first non zero value among unused rows
+	#print(a)
+	#print(pivot_element.row)
+	#print(pivot_element.column)
+	while abs(a[pivot_element.row][pivot_element.column]) < 0.001:
+		#print('test4')
+		if pivot_element.row < len(a)-1:
+			pivot_element.row += 1
+		else:
+			pivot_element.valid = False
+			break
+		#print(pivot_element.row)
+		#print(pivot_element.column)
+		
+	return pivot_element
+
+def SwapLines(a, b, used_rows, pivot_element):
+    a[pivot_element.column], a[pivot_element.row] = a[pivot_element.row], a[pivot_element.column]
+    b[pivot_element.column], b[pivot_element.row] = b[pivot_element.row], b[pivot_element.column]
+    used_rows[pivot_element.column], used_rows[pivot_element.row] = used_rows[pivot_element.row], used_rows[pivot_element.column]
+    pivot_element.row = pivot_element.column;
+
+def ProcessPivotElement(a, b, pivot_element):
+    # Write your code here
+    #scale row
+    #print(pivot_element.row)
+    #print(pivot_element.column)
+    #for i in a:
+   # 	print(i)
+    #print(b)
+    #print(a[pivot_element.row][pivot_element.column])
+    #print(b[pivot_element.row])
+    b[pivot_element.row] = b[pivot_element.row]/a[pivot_element.row][pivot_element.column]
+    a[pivot_element.row] = [i/a[pivot_element.row][pivot_element.column] for i in a[pivot_element.row]]
+    #subtract from other rows to make then zeros
+    for rowInd,row in enumerate(a):
+    	if rowInd != pivot_element.row:
+    		scaleFactor = float(row[pivot_element.column])
+    		if scaleFactor != 0:
+    			row = [i/scaleFactor for i in row]
+    			b[rowInd] = b[rowInd]/scaleFactor
+    			row = [a - b for a, b in zip(row, a[pivot_element.row])]
+    			b[rowInd] = b[rowInd] - b[pivot_element.row]
+    			
+    			a[rowInd] = row
+    			#rescale row by it's index to make it's primary number 1
+    			reScale = a[rowInd][rowInd]
+    			if reScale != 0:
+	    			a[rowInd] = [i/reScale for i in a[rowInd]]
+    				b[rowInd] = b[rowInd]/reScale
+    			else:
+    				#fill b vector with nones
+    				pass
+    				#b[rowInd] = None
+    				
+    			
+def MarkPivotElementUsed(pivot_element, used_rows, used_columns):
+    used_rows[pivot_element.row] = True
+    used_columns[pivot_element.column] = True
+    
+def printA(a,b):
+	for ind,i in enumerate(a):
+		print(str(i) + '   ' + str(b[ind]))
+
+def SolveEquation(equation):
+    a = equation.a
+    b = equation.b
+    size = len(a)
+
+    used_columns = [False] * size
+    used_rows = [False] * size
+    for step in range(size):
+        pivot_element = SelectPivotElement(a, used_rows, used_columns)
+        if not pivot_element.valid:
+        	#print('test3')
+        	return [0, False] #return false validity
+        #print('pivot element : ' + str(pivot_element.row) + ' '  + str(pivot_element.column))
+        #print('a before swap')
+        #printA(a,b)
+        SwapLines(a, b, used_rows, pivot_element)
+        #print('a after swap')
+        #printA(a,b)
+        ProcessPivotElement(a, b, pivot_element)
+        #print('a after process')
+        #printA(a,b)
+        #print()
+        MarkPivotElementUsed(pivot_element, used_rows, used_columns)
+
+    return [b, True]  #return b and validity
+
 
 def getSubsets(n,m):
 	#return subsets of size m
@@ -47,7 +171,8 @@ def solve_diet_problem(n, m, A, b, c):
 	subsets = getSubsets(n, m)
 	
 	#for each subset of inequalities, perform gaussian elimination to solve for a vertex
-	maxMetric = 0
+	printA(inequalitiesA,inequalitiesB)
+	maxMetric = -float('inf')
 	solutionFound = False
 	isInfinity = False
 	for subset in subsets:
@@ -57,10 +182,12 @@ def solve_diet_problem(n, m, A, b, c):
 		for j in subset:
 			subA.append(inequalitiesA[j])
 			subB.append(inequalitiesB[j])
-		equation = ge.Equation(subA,subB)
+		print()
+		printA(subA,subB)
+		equation = Equation(subA,subB)
 
 		
-		[b,vertexValid] = ge.SolveEquation(equation)
+		[b,vertexValid] = SolveEquation(equation)
 		if vertexValid:
 			#check if solution honors all inequalities
 			isSolution = True
@@ -73,7 +200,13 @@ def solve_diet_problem(n, m, A, b, c):
 				solutionFound = True
 				#calculate metric
 				metric = sum([b[i]*c[i] for i in range(m)])
+				print()
+				print('its a solution!!!!!!!!!!!!!!!!!!')
+				print(b)
+				print(metric)
+				print()
 				if metric > maxMetric:
+					print('and its better')
 					maxMetric = metric
 					bestAnswer = list(b)
 					#check if last inequality (the check for infinity) is one of the vertexes for the current max
@@ -110,4 +243,14 @@ if anst == 0:
 	print(' '.join(list(map(lambda x : '%.18f' % x, ansx))))
 if anst == 1:
 	print("Infinity")
-    
+
+if True:
+	linprog_res = linprog(-np.array(c), A_ub=np.array(A), b_ub=np.array(b), options={'tol': 1e-3})
+	if linprog_res.status == 3:
+		print('Infinity')
+	elif linprog_res.status == 2:
+		print('No solution')
+	elif linprog_res.status == 0:
+		solution_x = linprog_res.x
+		print('x_ref =', ' '.join(list(map(lambda x: '%.18f' % float(x), solution_x))))
+		print('Bounded solution')    
