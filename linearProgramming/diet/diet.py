@@ -28,17 +28,7 @@ def solve_diet_problem(n, m, A, b, c):
 	# Write your code here
 	# linear programming of the form Ax < b
 	# we want to maximize the c*x
-	print('n ' + str(n))
-	print('m ' + str(m))
-	for ind, i in enumerate(A):
-		print(str(i) + str(b[ind]))
-	print
-	print(b)
-	print(c)
-	
-	print()
-	
-	print('assemle list of inequalities')
+
 	inequalitiesA = []
 	inequalitiesB = []
 	for ind, i in enumerate(A):
@@ -54,16 +44,7 @@ def solve_diet_problem(n, m, A, b, c):
 	inequalitiesA.append([1] * m)
 	inequalitiesB.append(10**9)
 		
-	
-	
-	for ind, i in enumerate(inequalitiesA):	
-		print(str(i) + ' ' + str(inequalitiesB[ind]))
-		
-	
-	print()
-	print('subsets')
 	subsets = getSubsets(n, m)
-	print(subsets)
 	
 	#for each subset of inequalities, perform gaussian elimination to solve for a vertex
 	maxMetric = 0
@@ -71,22 +52,16 @@ def solve_diet_problem(n, m, A, b, c):
 	isInfinity = False
 	for subset in subsets:
 		#form equations for this subset
-		print()
 		subA = []
 		subB = []
-		#print(i)
 		for j in subset:
 			subA.append(inequalitiesA[j])
 			subB.append(inequalitiesB[j])
-		print('equations')
 		equation = ge.Equation(subA,subB)
-		for ind, j in enumerate(equation.a):
-			print(str(j) + ' ' + str(equation.b[ind]))
+
 		
-		print('solve for subset')
 		[b,vertexValid] = ge.SolveEquation(equation)
 		if vertexValid:
-			print(b)
 			#check if solution honors all inequalities
 			isSolution = True
 			
@@ -98,23 +73,15 @@ def solve_diet_problem(n, m, A, b, c):
 				solutionFound = True
 				#calculate metric
 				metric = sum([b[i]*c[i] for i in range(m)])
-				print(metric) 
 				if metric > maxMetric:
 					maxMetric = metric
 					bestAnswer = list(b)
 					#check if last inequality (the check for infinity) is one of the vertexes for the current max
-					print('subset')
-					print(subset)
-					print(len(inequalitiesA))
 					if len(inequalitiesA)-1 in subset:
-						print('here I am!!!!!!!!!!!!!!')
 						isInfinity = True
 					else:
 						isInfinity = False 
 					
-	print('heres the max!')
-	print(maxMetric)
-	
 	ansx = [0] * m
 	if not solutionFound:
 		anst = -1
