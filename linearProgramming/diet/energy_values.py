@@ -74,10 +74,14 @@ def ProcessPivotElement(a, b, pivot_element):
     			a[rowInd] = row
     			#rescale row by it's index to make it's primary number 1
     			reScale = a[rowInd][rowInd]
-    			a[rowInd] = [i/reScale for i in a[rowInd]]
-    			b[rowInd] = b[rowInd]/reScale
-    			#a[rowInd] = row
-
+    			if reScale != 0:
+	    			a[rowInd] = [i/reScale for i in a[rowInd]]
+    				b[rowInd] = b[rowInd]/reScale
+    			else:
+    				#fill b vector with nones
+    				b[rowInd] = None
+    				
+    			
 def MarkPivotElementUsed(pivot_element, used_rows, used_columns):
     used_rows[pivot_element.row] = True
     used_columns[pivot_element.column] = True
@@ -96,7 +100,7 @@ def SolveEquation(equation):
     for step in range(size):
         pivot_element = SelectPivotElement(a, used_rows, used_columns)
         if not pivot_element.valid:
-        	print('test3')
+        	#print('test3')
         	return [0, False] #return false validity
         #print('pivot element : ' + str(pivot_element.row) + ' '  + str(pivot_element.column))
         #print('a before swap')
