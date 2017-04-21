@@ -1,9 +1,13 @@
 # python3
 from sys import stdin
-from scipy.optimize import linprog
+
 import numpy as np
 import copy
 
+verbose = False
+
+if verbose:
+	from scipy.optimize import linprog
 
 class Equation:
     def __init__(self, a, b):
@@ -171,7 +175,7 @@ def solve_diet_problem(n, m, A, b, c):
 	subsets = getSubsets(n, m)
 	
 	#for each subset of inequalities, perform gaussian elimination to solve for a vertex
-	printA(inequalitiesA,inequalitiesB)
+	#printA(inequalitiesA,inequalitiesB)
 	maxMetric = -float('inf')
 	solutionFound = False
 	isInfinity = False
@@ -182,8 +186,9 @@ def solve_diet_problem(n, m, A, b, c):
 		for j in subset:
 			subA.append(inequalitiesA[j])
 			subB.append(inequalitiesB[j])
-		print()
-		printA(subA,subB)
+		if verbose:
+			print()
+			printA(subA,subB)
 		equation = Equation(subA,subB)
 
 		
@@ -193,27 +198,48 @@ def solve_diet_problem(n, m, A, b, c):
 			isSolution = True
 			
 			for ind,inequality in enumerate(inequalitiesA):
-				if not sum([inequality[k]*b[k] for k in range(len(inequality))]) <= inequalitiesB[ind]:
+				diff = sum([inequality[k]*b[k] for k in range(len(inequality))]) - inequalitiesB[ind]
+				if not diff <= 0.001:
+					if verbose:
+						print('missed qualify by this much: ' + str(diff))
 					isSolution = False
 					break
 			if isSolution:
 				solutionFound = True
 				#calculate metric
 				metric = sum([b[i]*c[i] for i in range(m)])
-				print()
-				print('its a solution!!!!!!!!!!!!!!!!!!')
-				print(b)
-				print(metric)
-				print()
+				if verbose:
+					print()
+					print('its a solution!!!!!!!!!!!!!!!!!!')
+					print(b)
+					print(metric)
+					print()
 				if metric > maxMetric:
-					print('and its better')
-					maxMetric = metric
-					bestAnswer = list(b)
+
 					#check if last inequality (the check for infinity) is one of the vertexes for the current max
+					#also check if the metric is greater than 100 or else discard it
 					if len(inequalitiesA)-1 in subset:
-						isInfinity = True
+						if metric > 0.001:
+							isInfinity = True
+							if verbose:
+								print('its infinity: ' + str(metric))
+						else:
+							if verbose:
+								print('skipping this infinity!!!!!!!!!!!!!!!!!!!' + str(metric))
+							continue #skip if it has an infinity edge but isn't large 
 					else:
 						isInfinity = False 
+					if verbose:
+						print('and its better')
+					maxMetric = metric
+					bestAnswer = list(b)
+			
+	if verbose:
+		print()
+		print('all inequalities')
+		printA(inequalitiesA,inequalitiesB)
+		print('max metric: ' + str(maxMetric))
+			
 					
 	ansx = [0] * m
 	if not solutionFound:
@@ -233,6 +259,7 @@ for i in range(n):
 b = list(map(int, stdin.readline().split()))
 c = list(map(int, stdin.readline().split()))
 
+
 anst, ansx = solve_diet_problem(n, m, A, b, c)
 
 
@@ -244,10 +271,12 @@ if anst == 0:
 if anst == 1:
 	print("Infinity")
 
-if True:
+if verbose:
 	linprog_res = linprog(-np.array(c), A_ub=np.array(A), b_ub=np.array(b), options={'tol': 1e-3})
 	if linprog_res.status == 3:
 		print('Infinity')
+		solution_x = linprog_res.x
+		print('x_ref =', ' '.join(list(map(lambda x: '%.18f' % float(x), solution_x))))
 	elif linprog_res.status == 2:
 		print('No solution')
 	elif linprog_res.status == 0:
