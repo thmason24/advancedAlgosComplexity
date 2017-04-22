@@ -5,6 +5,7 @@ import numpy as np
 import copy
 
 verbose = False
+verbose2 = False
 
 if verbose:
 	from scipy.optimize import linprog
@@ -31,28 +32,20 @@ def ReadEquation():
     return Equation(a, b)
 
 def SelectPivotElement(a, used_rows, used_columns):
-	# This algorithm selects the first free element.
-	# You'll need to improve it to pass the problem.
+
 	pivot_element = Position(0, 0)
-	#print('test2')
     #find leftmost non zero which is unused
 	while used_rows[pivot_element.row]:
 		pivot_element.row += 1	
 	while used_columns[pivot_element.column]:
 		pivot_element.column += 1	
 	#get first non zero value among unused rows
-	#print(a)
-	#print(pivot_element.row)
-	#print(pivot_element.column)
 	while abs(a[pivot_element.row][pivot_element.column]) < 0.001:
-		#print('test4')
 		if pivot_element.row < len(a)-1:
 			pivot_element.row += 1
 		else:
 			pivot_element.valid = False
 			break
-		#print(pivot_element.row)
-		#print(pivot_element.column)
 		
 	return pivot_element
 
@@ -83,7 +76,6 @@ def ProcessPivotElement(a, b, pivot_element):
     			b[rowInd] = b[rowInd]/scaleFactor
     			row = [a - b for a, b in zip(row, a[pivot_element.row])]
     			b[rowInd] = b[rowInd] - b[pivot_element.row]
-    			
     			a[rowInd] = row
     			#rescale row by it's index to make it's primary number 1
     			reScale = a[rowInd][rowInd]
@@ -114,7 +106,6 @@ def SolveEquation(equation):
     for step in range(size):
         pivot_element = SelectPivotElement(a, used_rows, used_columns)
         if not pivot_element.valid:
-        	#print('test3')
         	return [0, False] #return false validity
         #print('pivot element : ' + str(pivot_element.row) + ' '  + str(pivot_element.column))
         #print('a before swap')
@@ -153,7 +144,6 @@ def getSubsets(n,m):
 
   
 def solve_diet_problem(n, m, A, b, c):  
-	# Write your code here
 	# linear programming of the form Ax < b
 	# we want to maximize the c*x
 
@@ -170,7 +160,7 @@ def solve_diet_problem(n, m, A, b, c):
 		inequalitiesB.append(0)
 	#add inequality for very large solution to check infinity
 	inequalitiesA.append([1] * m)
-	inequalitiesB.append(10**9)
+	inequalitiesB.append(10e9)
 		
 	subsets = getSubsets(n, m)
 	
@@ -219,10 +209,22 @@ def solve_diet_problem(n, m, A, b, c):
 					#check if last inequality (the check for infinity) is one of the vertexes for the current max
 					#also check if the metric is greater than 100 or else discard it
 					if len(inequalitiesA)-1 in subset:
-						if metric > 0.001:
+						#check if doubling the solution increases the metric
+						increases = sum([2*b[i]*c[i] for i in range(m)]) > metric
+						#check if doubling the solution causes an inequality to fail
+						failedInequality = False
+						for i in range(len(inequalitiesA)):
+							if sum([2*b[k]*inequalitiesA[i][k] for k in range(m)]) > inequalitiesB[i]:
+								failedInequality = True
+								break
+						#if increases and not failedInequality:
+						if metric >= 10e9-10e3:
 							isInfinity = True
+							bestAnswer = list(b)
 							if verbose:
-								print('its infinity: ' + str(metric))
+								print('its infinity   : ' + str(metric))
+								print('double b Metric: ' + str(sum([2*b[i]*c[i] for i in range(m)])))
+							break
 						else:
 							if verbose:
 								print('skipping this infinity!!!!!!!!!!!!!!!!!!!' + str(metric))
@@ -239,6 +241,7 @@ def solve_diet_problem(n, m, A, b, c):
 		print('all inequalities')
 		printA(inequalitiesA,inequalitiesB)
 		print('max metric: ' + str(maxMetric))
+		print(c)
 			
 					
 	ansx = [0] * m
@@ -246,6 +249,7 @@ def solve_diet_problem(n, m, A, b, c):
 		anst = -1
 	elif isInfinity:
 		anst = 1
+		ansx = bestAnswer
 	else:
 		anst = 0
 		ansx = bestAnswer
@@ -272,14 +276,36 @@ if anst == 1:
 	print("Infinity")
 
 if verbose:
-	linprog_res = linprog(-np.array(c), A_ub=np.array(A), b_ub=np.array(b), options={'tol': 1e-3})
+	linprog_res = linprog(-np.array(c), A_ub=np.array(A), b_ub=np.array(b), options={'tol': 1e-5})
 	if linprog_res.status == 3:
 		print('Infinity')
 		solution_x = linprog_res.x
-		print('x_ref =', ' '.join(list(map(lambda x: '%.18f' % float(x), solution_x))))
+		#print(solution_x)
+		#print('x_ref =', ' '.join(list(map(lambda x: '%.18f' % float(x), solution_x))))
 	elif linprog_res.status == 2:
 		print('No solution')
 	elif linprog_res.status == 0:
 		solution_x = linprog_res.x
+		print(solution_x)
 		print('x_ref =', ' '.join(list(map(lambda x: '%.18f' % float(x), solution_x))))
-		print('Bounded solution')    
+		print('Bounded solution')
+		if verbose2:
+			print('show how well linalg solution works')
+			printA(A,b)
+			print('solution')
+			print(solution_x)
+			print('A total')
+			for ind, i in enumerate(A):
+				print(i)
+				total = sum([i[k]*solution_x[k] for k in range(len(A))])
+				print(str(total) + ' ' + str(b[ind]))
+			print()
+			print('and from your solution')
+			print(ansx)
+			for ind, i in enumerate(A):
+				print(i)
+				total = sum([i[k]*ansx[k] for k in range(len(A))])
+				twiceTotal = sum([i[k]*2*ansx[k] for k in range(len(A))])
+				print(str(total) + ' ' + str(b[ind]))		
+				print(str(twiceTotal) + ' ' + str(b[ind]))		
+					

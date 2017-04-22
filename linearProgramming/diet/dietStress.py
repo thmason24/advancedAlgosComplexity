@@ -43,7 +43,7 @@ for index in range(10000):
 
     print("======= Lin Solution ==================")
     solution_x = None
-    linprog_res = linprog(-c, A_ub=A, b_ub=b, options={'tol': 1e-3})
+    linprog_res = linprog(-c, A_ub=A, b_ub=b, options={'tol': 1e-5})
     if linprog_res.status == 3:
         assert stdout_lines[0] == 'Infinity'
     elif linprog_res.status == 2:
