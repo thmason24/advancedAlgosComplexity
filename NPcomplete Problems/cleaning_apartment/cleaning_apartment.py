@@ -1,7 +1,7 @@
 # python3
 import sys
 
-verbose = True
+verbose = False
 verbose2 = False
 
 if verbose2:
@@ -100,7 +100,7 @@ def printEquisatisfiableSatFormula():
 		for j in range(n):
 			for k in range(n):
 				#for each pair of position variable ensure that at most of them is true
-				if j != k:
+				if j < k:
 					clause = []
 					clause.append(-vars[j])
 					clause.append(-vars[k])
@@ -120,7 +120,7 @@ def printEquisatisfiableSatFormula():
 		for j in range(n):
 			for k in range(n):
 				#for each pair of position variable ensure that at most of them is true
-				if j != k:
+				if j < k:
 					clause = []
 					clause.append(-vars[j])
 					clause.append(-vars[k])
