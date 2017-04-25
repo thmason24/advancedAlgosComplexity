@@ -163,8 +163,11 @@ def isSatisfiable():
 			if i in vertices and i+1 in vertices:
 				satisfiable = False
 			print(satisfiable)
-			
 	
+	#since edges are implications,  each variable in an SCC must contain the same value
+	#in reverse topological order, assign all literals in an SCC to 1 and negations to zero
+	#move up stream in topological order and try to find a 1 implies zero
+	#in other words, check to make sure that an upstream variable does not imply it's negation downstream	
 	
 
 result = isSatisfiable()
