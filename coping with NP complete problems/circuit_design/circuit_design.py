@@ -2,7 +2,7 @@
 n, m = map(int, input().split())
 clauses = [ list(map(int, input().split())) for i in range(m) ]
 
-verbose = True
+verbose = False
 
 # This solution tries all possible 2^n variable assignments.
 # It is too slow to pass the problem.
@@ -82,8 +82,8 @@ def defineImplicationGraph():
 	
 	
 	#add test edge
-	edges.append([0,1])
-	edges.append([1,0])
+	#edges.append([0,1])
+	#edges.append([1,0])
 	
 	if verbose:
 		print('variables')
@@ -125,7 +125,6 @@ def isSatisfiable():
 	topoOrder = toposort(adj)
 	sscOrder = [-1] * len(adj)
 	curSCCorder = 0
-	print(topoOrder)
 	#explore from last item in toporder to find scc components via explore
 	inGraph = [True] * len(adj)
 	while any(inGraph):
@@ -135,13 +134,10 @@ def isSatisfiable():
 			if inGraph[topoOrder[-(i+1)]]:
 				sink = topoOrder[-(i+1)]
 				break
-		print(sink)
 		if sink == 5 and False:
 			break
 		visited = [False] * len(adj)
-		print(inGraph)
 		explore(adj,sink,visited,inGraph)
-		print(visited)
 		#assign visited to current sccOrder
 		for i in range(len(adj)):
 			if visited[i]:
@@ -157,17 +153,33 @@ def isSatisfiable():
 	#check if any strongly connected component has a variable and it's negation
 	for i in range(max(sscOrder)+1):
 		vertices = [j for j in range(len(adj)) if sscOrder[j] == i]
-		print(vertices)
 		#check if component has any variable with it's negation
 		for i in range(0,len(adj),2):
 			if i in vertices and i+1 in vertices:
 				satisfiable = False
-			print(satisfiable)
+				return None
+
 	
+	#once it's been shown that no SCC contains a variable and it's negation,  one can find a satisfying assignment
 	#since edges are implications,  each variable in an SCC must contain the same value
 	#in reverse topological order, assign all literals in an SCC to 1 and negations to zero
 	#move up stream in topological order and try to find a 1 implies zero
-	#in other words, check to make sure that an upstream variable does not imply it's negation downstream	
+	#in other words, check to make sure that an upstream variable does not imply it's negation downstream
+	
+	solutionVector = [-1] * len(adj)
+	for i in range(max(sscOrder)+1):
+		vertices = [j for j in range(len(adj)) if sscOrder[j] == i]
+		for j in vertices:
+			if solutionVector[j] == -1:
+				solutionVector[j] = 1
+				if j%2 == 0:
+					solutionVector[j+1] = 0
+				else:
+					solutionVector[j-1] = 0
+	return solutionVector
+				
+				
+		
 	
 
 result = isSatisfiable()
@@ -176,3 +188,11 @@ if result is None:
 else:
     print("SATISFIABLE");
     print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
+
+if False:
+	result = isSatisfiableNaive()
+	if result is None:
+		print("UNSATISFIABLE")
+	else:
+		print("SATISFIABLE");
+		print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
