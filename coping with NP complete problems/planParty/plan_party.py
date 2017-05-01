@@ -6,7 +6,7 @@ import threading
 # This code is used to avoid stack overflow issues
 sys.setrecursionlimit(10**6) # max depth of recursion
 threading.stack_size(2**26)  # new thread will get stack of such size
-
+verbose = False
 
 class Vertex:
     def __init__(self, weight):
@@ -25,22 +25,40 @@ def ReadTree():
 
 
 def dfs(tree, vertex, parent, score):
-	print(vertex)
-	print(tree[vertex].children)
+	if verbose:
+		print('vertex: ' + str(vertex))
+		print('parent: ' + str(parent))
+		print('children: ' + str(tree[vertex].children))
 	for child in tree[vertex].children:
 		if child != parent:
+			if verbose:
+				print('descend')
 			dfs(tree, child, vertex, score)
+	if verbose:
+		print('post vertex: ' + str(vertex))
 	m1 = tree[vertex].weight
 	for i in tree[vertex].children:
-		for j in tree[i].children:
-			m1 = m1 + score[j]
+		if i != parent:
+			for j in tree[i].children:
+				if j != i and j != vertex:
+					if verbose:
+						print('vertex        : ' + str(vertex))
+						print('children      : ' + str(i))
+						print('grandchildren : ' + str(j))
+						print(m1)
+					m1 = m1 + score[j]
+					if verbose:
+						print(m1)
 	m0 = 0
 	for i in tree[vertex].children:
-		m0 = m0 + score[i]
-	print('m1 ' + str(m1))
-	print('m0 ' + str(m0))
+		if i != parent:
+			m0 = m0 + score[i]
+
 	score[vertex] = max(m0,m1)
-	print(score)
+	if verbose:
+		print('m1 ' + str(m1))
+		print('m0 ' + str(m0))
+		print('score: ' + str(score))
 					
 	    
     # This is a template function for processing a tree using depth-first search.
@@ -54,9 +72,8 @@ def MaxWeightIndependentTreeSubset(tree):
         return 0
     score = [float('inf')] * size
     dfs(tree, 0, -1,score)
-    print(score)
     # You must decide what to return.
-    return 0
+    return score[0]
 
 
 def main():

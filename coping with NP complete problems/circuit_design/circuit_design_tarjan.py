@@ -30,7 +30,7 @@ def checkSolution(solution):
 # This solution tries all possible 2^n variable assignments.
 # It is too slow to pass the problem.
 # Implement a more efficient algorithm here.
-def isSatisfiableNaive():
+def isSatisfiableNaive(n,m,clauses):
     for mask in range(1<<n):
         result = [ (mask >> i) & 1 for i in range(n) ]
         formulaIsSatisfied = True
@@ -47,91 +47,42 @@ def isSatisfiableNaive():
             return result
     return None
 
-def dfs(adj, visited, postOrder,clock, x):
-	#print('visiting ' + str(x))
-	visited[x] = True
-	for i in adj[x]:
-		if not visited[i]:
-			dfs(adj,visited,postOrder,clock,i)      
-	clock[0] += 1
-	postOrder[x] = clock[0]  
-	return
-
-
-
-def strongConnect(v,SCC,index,indexes,lowLink,onStack,visited):
+def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack):
 	indexes[v] = index[0]
 	lowLink[v] = index[0]
 	index[0] += 1
-	SCC[-1].append(v)
 	onStack[v] = True
+	stack.append(v)
 	for w in adj[v]:
 		if indexes[w] == -1:
-			strongConnect(w,SCC,index,indexes,lowLink,onStack,visited)
+			strongConnect(adj,w,SCC,index,indexes,lowLink,onStack)
 			lowLink[v] = min(lowLink[v],lowLink[w])
 		elif onStack[w]:
-			lowLink[v] = min(lowLink[v],indexes[w]
+			lowLink[v] = min(lowLink[v],indexes[w])
 	
 	if lowLink[v] == indexes[v]:
-		#remove SCC from onStack
-		for i in SSC[-1]:
-			onStack[i] = False
-		#start a new SCC
-		SCC.append([])
+		#start new SCC
+		if any(onStack):
+			SCC.append([])
+			stack = [i for i in range(len(adj)) if onStack[i]]
+			print('stack ' + str(stack))
+			for i in stack:
+				onStack[i] = False
+				SCC[-1].append(i)
 		
-			
-		
-	
-	
 	 
 def tarjanSCC(adj):
 	index = [0]
 	indexes = [-1] * len(adj)
 	lowLink = [-1] * len(adj)
 	onStack = [False] * len(adj)
-	visited = [False] * len(adj)
+	stack = []
 	SCC = []
-	SCC.append([])
-	for i in adj:
-		if not visited[i]:
-			strongConnect(0,SCC,index,indexes,lowLink,onStack,visited)
+	for i in range(len(adj)):
+		if indexes[i] == -1:
+			strongConnect(adj,i,SCC,index,indexes,lowLink,onStack)
 	return SCC
 		
-	
-	
-	
-    
-def number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2):
-    result = 0
-    postOrder = [0] * len(adj)
-    #initialize visited with removed list
-    visited   =  [False] * len(adj)
-    clock = [0]
-    #find a sink by finding a source in the reverse graph
-    #a vertex in the source compoenent will have a higher postorder than
-    #those that are not sources
-    for i in range(len(adjr)):
-        if not visited[i]:
-            dfs(adjr,visited,postOrder,clock,i)
-    
-    #get reverse post order
-    reversePostOrder = np.argsort(postOrder)[::-1]
-
-    #reinit visisted
-    visited   =  [False] * len(adj)
-    compAssigned = [-1]  * len(adj)  
-    #run dfs on the real adjency list in reverse sort order.  count every time a dfs starts fresh from the top on an unvisited node
-    if verbose2:
-	    print('reverse post order  ' +str(reversePostOrder))
-    for i in reversePostOrder:
-        if not visited[i]:
-            result += 1
-            dfs(adj,visited,postOrder,clock,i)
-            for j in range(len(adj)):
-            	if compAssigned[j] == -1 and visited[j]:
-            		compAssigned[j] = result
-        
-    return compAssigned
                
 def defineImplicationGraph(n,m,clauses,verbose,verbose2):
 	#create vertices from variables
@@ -182,43 +133,33 @@ def defineImplicationGraph(n,m,clauses,verbose,verbose2):
 	adj = [[] for _ in range(2*n)]
 	for (a, b) in edges:
 		adj[a].append(b)
-	#reverse graph
-	adjr = [[] for _ in range(2*n)]
-	for (a, b) in edges:
-		adjr[b].append(a)
         
 	if verbose2:
 		print()
 		print('adjacency list')
 		for i in adj:
 			print(i)
-			
-		print()
-		print('reverse adj list')
-		for i in adjr:
-			print(i)
-	
-	return adj, adjr
+	return adj
 				
 def isSatisfiable(n,m,clauses,verbose,verbose2):
-	adj,adjr = defineImplicationGraph(n,m,clauses,verbose,verbose2)
-	sscOrder = number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2)
+	adj = defineImplicationGraph(n,m,clauses,verbose,verbose2)
+	#sscOrder = number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2)
+	SCC = tarjanSCC(adj)
 								
 	if verbose:
 		print()
-		print('sccOrder')
-		print(sscOrder)
+		print('SCC')
+		for i in SCC:
+			print(i)
 	
 	satisfiable = True
 	#check if any strongly connected component has a variable and it's negation
-	for i in range(max(sscOrder)+1):
-		vertices = [j for j in range(len(adj)) if sscOrder[j] == i]
+	for vertices in SCC:
 		#check if component has any variable with it's negation
 		for i in range(0,len(adj),2):
 			if i in vertices and i+1 in vertices:
 				satisfiable = False
 				return None
-
 	
 	#once it's been shown that no SCC contains a variable and it's negation,  one can find a satisfying assignment
 	#since edges are implications,  each variable in an SCC must contain the same value
@@ -227,8 +168,7 @@ def isSatisfiable(n,m,clauses,verbose,verbose2):
 	#in other words, check to make sure that an upstream variable does not imply it's negation downstream
 	
 	solutionVectorGraph = [-1] * len(adj)
-	for i in range(max(sscOrder)+1):
-		vertices = [j for j in range(len(adj)) if sscOrder[j] == i]
+	for vertices in SCC:
 		for j in vertices:
 			if solutionVectorGraph[j] == -1:
 				solutionVectorGraph[j] = 1
@@ -258,9 +198,9 @@ def isSatisfiable(n,m,clauses,verbose,verbose2):
 				
 def main():
 
-	verbose = False
-	verbose2 = False
-	showNaive = False
+	verbose = True
+	verbose2 = True
+	showNaive = True
 	stressTest = False
 	n, m = map(int, input().split())
 	clauses = [ list(map(int, input().split())) for i in range(m) ]
@@ -272,7 +212,7 @@ def main():
 		print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
 
 	if showNaive:
-		result = isSatisfiableNaive()
+		result = isSatisfiableNaive(n,m,clauses)
 		if result is None:
 			print("UNSATISFIABLE")
 		else:
