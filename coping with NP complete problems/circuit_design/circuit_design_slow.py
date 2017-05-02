@@ -4,6 +4,7 @@ import threading
 import sys
 import time
 
+
 # This code is used to avoid stack overflow issues
 sys.setrecursionlimit(10**6) # max depth of recursion
 threading.stack_size(2**32)  # new thread will get stack of such size
@@ -31,7 +32,7 @@ def checkSolution(solution,clauses):
 # This solution tries all possible 2^n variable assignments.
 # It is too slow to pass the problem.
 # Implement a more efficient algorithm here.
-def isSatisfiableNaive(n,m,clauses):
+def isSatisfiableNaive():
     for mask in range(1<<n):
         result = [ (mask >> i) & 1 for i in range(n) ]
         formulaIsSatisfied = True
@@ -48,52 +49,48 @@ def isSatisfiableNaive(n,m,clauses):
             return result
     return None
 
-def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack):
-	indexes[v] = index[0]
-	lowLink[v] = index[0]
-	index[0] += 1
-	onStack[v] = True
-	stack.append(v)
-	#print('v top: ' + str(v))
-	for w in adj[v]:
-		if indexes[w] == -1:
-			strongConnect(adj,w,SCC,index,indexes,lowLink,onStack,stack)
-			lowLink[v] = min(lowLink[v],lowLink[w])
-		elif onStack[w]:
-			lowLink[v] = min(lowLink[v],indexes[w])
+def dfs(adj, visited, postOrder,clock, x):
+	#print('visiting ' + str(x))
+	visited[x] = True
+	for i in adj[x]:
+		if not visited[i]:
+			dfs(adj,visited,postOrder,clock,i)      
+	clock[0] += 1
+	postOrder[x] = clock[0]  
+	return	
 	
-	#print('v: ' + str(v))
-	if lowLink[v] == indexes[v]:
-		#start new SCC
-		#print('start new component')
-		SCC.append([])
-		innerInd = 0
-		while True:
-			#print('ind ' + str(innerInd))
-			innerInd += 1
-			#print('stack ' + str(stack))
-			w = stack.pop()
-			SCC[-1].append(w)
-			onStack[w] = False	
-			#print('w = ' + str(w))
-			#print('v = ' + str(v))		
-			if w == v:
-				#print('test')
-				break
-		
-	 
-def tarjanSCC(adj):
-	index = [0]
-	indexes = [-1] * len(adj)
-	lowLink = [-1] * len(adj)
-	onStack = [False] * len(adj)
-	stack = []
-	SCC = []
-	for i in range(len(adj)):
-		if indexes[i] == -1:
-			strongConnect(adj,i,SCC,index,indexes,lowLink,onStack,stack)
-	return SCC
-		
+    
+def number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2):
+    result = 0
+    postOrder = [0] * len(adj)
+    #initialize visited with removed list
+    visited   =  [False] * len(adj)
+    clock = [0]
+    #find a sink by finding a source in the reverse graph
+    #a vertex in the source compoenent will have a higher postorder than
+    #those that are not sources
+    for i in range(len(adjr)):
+        if not visited[i]:
+            dfs(adjr,visited,postOrder,clock,i)
+    
+    #get reverse post order
+    reversePostOrder = np.argsort(postOrder)[::-1]
+
+    #reinit visisted
+    visited   =  [False] * len(adj)
+    compAssigned = [-1]  * len(adj)  
+    #run dfs on the real adjency list in reverse sort order.  count every time a dfs starts fresh from the top on an unvisited node
+    if verbose2:
+	    print('reverse post order  ' +str(reversePostOrder))
+    for i in reversePostOrder:
+        if not visited[i]:
+            result += 1
+            dfs(adj,visited,postOrder,clock,i)
+            for j in range(len(adj)):
+            	if compAssigned[j] == -1 and visited[j]:
+            		compAssigned[j] = result
+        
+    return compAssigned
                
 def defineImplicationGraph(n,m,clauses,verbose,verbose2):
 	#create vertices from variables
@@ -144,46 +141,43 @@ def defineImplicationGraph(n,m,clauses,verbose,verbose2):
 	adj = [[] for _ in range(2*n)]
 	for (a, b) in edges:
 		adj[a].append(b)
+	#reverse graph
+	adjr = [[] for _ in range(2*n)]
+	for (a, b) in edges:
+		adjr[b].append(a)
         
 	if verbose2:
 		print()
 		print('adjacency list')
 		for i in adj:
 			print(i)
-	return adj
+			
+		print()
+		print('reverse adj list')
+		for i in adjr:
+			print(i)
+	
+	return adj, adjr
 				
-def isSatisfiable(n,m,clauses,verbose,verbose2,verbose3):
-	startImplication = time.time()
-	adj = defineImplicationGraph(n,m,clauses,verbose,verbose2)
-	endImplication = time.time()
-	if verbose3:
-		print('impTime: ' + str(endImplication - startImplication))
-	#sscOrder = number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2)
-	startSCC = time.time()
-	SCC = tarjanSCC(adj)
-	endSCC = time.time()
-	if verbose3:
-		print('sccTime: ' + str(endSCC - startSCC))
+def isSatisfiable(n,m,clauses,verbose,verbose2):
+	adj,adjr = defineImplicationGraph(n,m,clauses,verbose,verbose2)
+	sscOrder = number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2)
 								
 	if verbose:
 		print()
-		print('SCC')
-		for i in SCC:
-			print(i)
+		print('sccOrder')
+		print(sscOrder)
 	
 	satisfiable = True
 	#check if any strongly connected component has a variable and it's negation
-	startIsSat = time.time()
-	for vertices in SCC:
+	for i in range(max(sscOrder)+1):
+		vertices = [j for j in range(len(adj)) if sscOrder[j] == i]
 		#check if component has any variable with it's negation
-		if len(vertices) > 1:
-			for i in range(0,len(adj),2):
-				if i in vertices and i+1 in vertices:
-					satisfiable = False
-					return None
-	endIsSat   = time.time()
-	if verbose3:
-		print('isSat Time: ' + str(endIsSat - startIsSat))
+		for i in range(0,len(adj),2):
+			if i in vertices and i+1 in vertices:
+				satisfiable = False
+				return None
+
 	
 	#once it's been shown that no SCC contains a variable and it's negation,  one can find a satisfying assignment
 	#since edges are implications,  each variable in an SCC must contain the same value
@@ -191,9 +185,9 @@ def isSatisfiable(n,m,clauses,verbose,verbose2,verbose3):
 	#move up stream in topological order and try to find a 1 implies zero
 	#in other words, check to make sure that an upstream variable does not imply it's negation downstream
 	
-	startSolution = time.time()
 	solutionVectorGraph = [-1] * len(adj)
-	for vertices in SCC:
+	for i in range(max(sscOrder)+1):
+		vertices = [j for j in range(len(adj)) if sscOrder[j] == i]
 		for j in vertices:
 			if solutionVectorGraph[j] == -1:
 				solutionVectorGraph[j] = 1
@@ -201,9 +195,6 @@ def isSatisfiable(n,m,clauses,verbose,verbose2,verbose3):
 					solutionVectorGraph[j+1] = 0
 				else:
 					solutionVectorGraph[j-1] = 0
-	endSolution = time.time()
-	if verbose3:
-		print('solutionTime: ' + str(endSolution-startSolution))
 	if verbose:				
 		print('solutionVector Graph')
 		print(solutionVectorGraph)
@@ -219,7 +210,7 @@ def isSatisfiable(n,m,clauses,verbose,verbose2,verbose3):
 		print(solutionVector)	
 	
 	if verbose:
-		print(checkSolution(solutionVector,clauses))
+		print(checkSolution(solutionVector))
 	
 	return solutionVector	
 				
@@ -228,12 +219,11 @@ def main():
 
 	verbose = False
 	verbose2 = False
-	verbose3 = True
 	showNaive = False
 	stressTest = True
 	n, m = map(int, input().split())
 	clauses = [ list(map(int, input().split())) for i in range(m) ]
-	result = isSatisfiable(n,m,clauses,verbose,verbose2,verbose3)
+	result = isSatisfiable(n,m,clauses,verbose,verbose2)
 	if result is None:
 		print("UNSATISFIABLE")
 	else:
@@ -241,7 +231,7 @@ def main():
 		print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
 
 	if showNaive:
-		result = isSatisfiableNaive(n,m,clauses)
+		result = isSatisfiableNaive()
 		if result is None:
 			print("UNSATISFIABLE")
 		else:
@@ -252,8 +242,8 @@ def main():
 		limit = 10000
 		n = np.random.randint(1, limit)
 		numClauses = np.random.randint(1, limit)
-		n= 1000000
-		numClauses = 1000000
+		n= 5000
+		numClauses = 4000
 		print()
 		print('numVar:     ' + str(n))
 		print('numClauses: ' + str(numClauses))
@@ -273,12 +263,12 @@ def main():
 			clauses.append(clause)
 		
 		start = time.time()
-		result = isSatisfiable(n,m,clauses,verbose,verbose2,verbose3)
-		end  =  time.time()
-		
+		result = isSatisfiable(n,m,clauses,verbose,verbose2)
+		end = time.time()
 		#resultControl = isSatisfiableNaive(n,m,clauses)
 		resultControl = result
-	
+		
+		
 		print()
 		if showNaive:
 			print('clauses')
@@ -289,7 +279,7 @@ def main():
 			print("UNSATISFIABLE")
 		else:
 			print("SATISFIABLE");
-			#print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
+			print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
 	
 		if result is None:
 			if not resultControl is None:
@@ -300,8 +290,7 @@ def main():
 			if not checkSolution(result,clauses):
 				print('solution does not satisfy clauses')
 				break
-		if verbose3:
-			print('time: ' + str(end - start))
+		print('time: ' + str(end - start))
 	
 # This is to avoid stack overflow issues
 threading.Thread(target=main).start()	
