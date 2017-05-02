@@ -2,6 +2,8 @@
 import numpy as np
 import threading
 import sys
+import time
+
 
 # This code is used to avoid stack overflow issues
 sys.setrecursionlimit(10**6) # max depth of recursion
@@ -13,7 +15,7 @@ threading.stack_size(2**32)  # new thread will get stack of such size
 
 
 
-def checkSolution(solution):
+def checkSolution(solution,clauses):
 	satisfied = True
 	for clause in clauses:
 		clauseSatisfied = False
@@ -55,50 +57,7 @@ def dfs(adj, visited, postOrder,clock, x):
 			dfs(adj,visited,postOrder,clock,i)      
 	clock[0] += 1
 	postOrder[x] = clock[0]  
-	return
-
-
-
-def strongConnect(v,SCC,index,indexes,lowLink,onStack,visited):
-	indexes[v] = index[0]
-	lowLink[v] = index[0]
-	index[0] += 1
-	SCC[-1].append(v)
-	onStack[v] = True
-	for w in adj[v]:
-		if indexes[w] == -1:
-			strongConnect(w,SCC,index,indexes,lowLink,onStack,visited)
-			lowLink[v] = min(lowLink[v],lowLink[w])
-		elif onStack[w]:
-			lowLink[v] = min(lowLink[v],indexes[w]
-	
-	if lowLink[v] == indexes[v]:
-		#remove SCC from onStack
-		for i in SSC[-1]:
-			onStack[i] = False
-		#start a new SCC
-		SCC.append([])
-		
-			
-		
-	
-	
-	 
-def tarjanSCC(adj):
-	index = [0]
-	indexes = [-1] * len(adj)
-	lowLink = [-1] * len(adj)
-	onStack = [False] * len(adj)
-	visited = [False] * len(adj)
-	SCC = []
-	SCC.append([])
-	for i in adj:
-		if not visited[i]:
-			strongConnect(0,SCC,index,indexes,lowLink,onStack,visited)
-	return SCC
-		
-	
-	
+	return	
 	
     
 def number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2):
@@ -261,7 +220,7 @@ def main():
 	verbose = False
 	verbose2 = False
 	showNaive = False
-	stressTest = False
+	stressTest = True
 	n, m = map(int, input().split())
 	clauses = [ list(map(int, input().split())) for i in range(m) ]
 	result = isSatisfiable(n,m,clauses,verbose,verbose2)
@@ -280,9 +239,11 @@ def main():
 			print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
 
 	while stressTest:
-		limit = 8
+		limit = 10000
 		n = np.random.randint(1, limit)
 		numClauses = np.random.randint(1, limit)
+		n= 5000
+		numClauses = 4000
 		print()
 		print('numVar:     ' + str(n))
 		print('numClauses: ' + str(numClauses))
@@ -301,10 +262,13 @@ def main():
 				clause.append(literal)
 			clauses.append(clause)
 		
-	
-		result = isSatisfiable()
-		resultControl = isSatisfiableNaive()
-	
+		start = time.time()
+		result = isSatisfiable(n,m,clauses,verbose,verbose2)
+		end = time.time()
+		#resultControl = isSatisfiableNaive(n,m,clauses)
+		resultControl = result
+		
+		
 		print()
 		if showNaive:
 			print('clauses')
@@ -323,10 +287,10 @@ def main():
 				print(" ".join(str(-i-1 if resultControl[i] else i+1) for i in range(n)))
 				break
 		else:
-			if not checkSolution(result):
+			if not checkSolution(result,clauses):
 				print('solution does not satisfy clauses')
 				break
-	
+		print('time: ' + str(end - start))
 	
 # This is to avoid stack overflow issues
 threading.Thread(target=main).start()	

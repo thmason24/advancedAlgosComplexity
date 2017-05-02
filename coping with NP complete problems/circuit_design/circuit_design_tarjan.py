@@ -2,6 +2,7 @@
 import numpy as np
 import threading
 import sys
+import time
 
 # This code is used to avoid stack overflow issues
 sys.setrecursionlimit(10**6) # max depth of recursion
@@ -13,7 +14,7 @@ threading.stack_size(2**32)  # new thread will get stack of such size
 
 
 
-def checkSolution(solution):
+def checkSolution(solution,clauses):
 	satisfied = True
 	for clause in clauses:
 		clauseSatisfied = False
@@ -47,28 +48,38 @@ def isSatisfiableNaive(n,m,clauses):
             return result
     return None
 
-def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack):
+def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack):
 	indexes[v] = index[0]
 	lowLink[v] = index[0]
 	index[0] += 1
 	onStack[v] = True
 	stack.append(v)
+	#print('v top: ' + str(v))
 	for w in adj[v]:
 		if indexes[w] == -1:
-			strongConnect(adj,w,SCC,index,indexes,lowLink,onStack)
+			strongConnect(adj,w,SCC,index,indexes,lowLink,onStack,stack)
 			lowLink[v] = min(lowLink[v],lowLink[w])
 		elif onStack[w]:
 			lowLink[v] = min(lowLink[v],indexes[w])
 	
+	#print('v: ' + str(v))
 	if lowLink[v] == indexes[v]:
 		#start new SCC
-		if any(onStack):
-			SCC.append([])
-			stack = [i for i in range(len(adj)) if onStack[i]]
-			print('stack ' + str(stack))
-			for i in stack:
-				onStack[i] = False
-				SCC[-1].append(i)
+		#print('start new component')
+		SCC.append([])
+		innerInd = 0
+		while True:
+			#print('ind ' + str(innerInd))
+			innerInd += 1
+			#print('stack ' + str(stack))
+			w = stack.pop()
+			SCC[-1].append(w)
+			onStack[w] = False	
+			#print('w = ' + str(w))
+			#print('v = ' + str(v))		
+			if w == v:
+				#print('test')
+				break
 		
 	 
 def tarjanSCC(adj):
@@ -80,7 +91,7 @@ def tarjanSCC(adj):
 	SCC = []
 	for i in range(len(adj)):
 		if indexes[i] == -1:
-			strongConnect(adj,i,SCC,index,indexes,lowLink,onStack)
+			strongConnect(adj,i,SCC,index,indexes,lowLink,onStack,stack)
 	return SCC
 		
                
@@ -191,17 +202,17 @@ def isSatisfiable(n,m,clauses,verbose,verbose2):
 		print(solutionVector)	
 	
 	if verbose:
-		print(checkSolution(solutionVector))
+		print(checkSolution(solutionVector,clauses))
 	
 	return solutionVector	
 				
 				
 def main():
 
-	verbose = True
-	verbose2 = True
-	showNaive = True
-	stressTest = False
+	verbose = False
+	verbose2 = False
+	showNaive = False
+	stressTest = True
 	n, m = map(int, input().split())
 	clauses = [ list(map(int, input().split())) for i in range(m) ]
 	result = isSatisfiable(n,m,clauses,verbose,verbose2)
@@ -220,9 +231,11 @@ def main():
 			print(" ".join(str(-i-1 if result[i] else i+1) for i in range(n)))
 
 	while stressTest:
-		limit = 8
+		limit = 10000
 		n = np.random.randint(1, limit)
 		numClauses = np.random.randint(1, limit)
+		n= 5000
+		numClauses = 4000
 		print()
 		print('numVar:     ' + str(n))
 		print('numClauses: ' + str(numClauses))
@@ -241,9 +254,12 @@ def main():
 				clause.append(literal)
 			clauses.append(clause)
 		
-	
-		result = isSatisfiable()
-		resultControl = isSatisfiableNaive()
+		start = time.time()
+		result = isSatisfiable(n,m,clauses,verbose,verbose2)
+		end  =  time.time()
+		
+		#resultControl = isSatisfiableNaive(n,m,clauses)
+		resultControl = result
 	
 		print()
 		if showNaive:
@@ -263,10 +279,10 @@ def main():
 				print(" ".join(str(-i-1 if resultControl[i] else i+1) for i in range(n)))
 				break
 		else:
-			if not checkSolution(result):
+			if not checkSolution(result,clauses):
 				print('solution does not satisfy clauses')
 				break
-	
+		print('time: ' + str(end - start))
 	
 # This is to avoid stack overflow issues
 threading.Thread(target=main).start()	
