@@ -48,7 +48,7 @@ def isSatisfiableNaive(n,m,clauses):
             return result
     return None
 
-def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack):
+def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack,satisfiable):
 	indexes[v] = index[0]
 	lowLink[v] = index[0]
 	index[0] += 1
@@ -57,7 +57,7 @@ def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack):
 	#print('v top: ' + str(v))
 	for w in adj[v]:
 		if indexes[w] == -1:
-			strongConnect(adj,w,SCC,index,indexes,lowLink,onStack,stack)
+			strongConnect(adj,w,SCC,index,indexes,lowLink,onStack,stack,satisfiable)
 			lowLink[v] = min(lowLink[v],lowLink[w])
 		elif onStack[w]:
 			lowLink[v] = min(lowLink[v],indexes[w])
@@ -89,9 +89,10 @@ def tarjanSCC(adj):
 	onStack = [False] * len(adj)
 	stack = []
 	SCC = []
+	satisfiable = [True]
 	for i in range(len(adj)):
 		if indexes[i] == -1:
-			strongConnect(adj,i,SCC,index,indexes,lowLink,onStack,stack)
+			strongConnect(adj,i,SCC,index,indexes,lowLink,onStack,stack,satisfiable)
 	return SCC
 		
                
@@ -171,19 +172,36 @@ def isSatisfiable(n,m,clauses,verbose,verbose2,verbose3):
 		for i in SCC:
 			print(i)
 	
+	#fast satcheck
+	startFastisSat = time.time()
 	satisfiable = True
-	#check if any strongly connected component has a variable and it's negation
-	startIsSat = time.time()
 	for vertices in SCC:
-		#check if component has any variable with it's negation
 		if len(vertices) > 1:
-			for i in range(0,len(adj),2):
-				if i in vertices and i+1 in vertices:
-					satisfiable = False
-					return None
-	endIsSat   = time.time()
+			for i in vertices:
+				if i%2 == 0:
+					if i+1 in vertices:
+						satisfiable = False
+						return None
+	endFastisSat = time.time()
 	if verbose3:
-		print('isSat Time: ' + str(endIsSat - startIsSat))
+		print('fastisSat Time: ' + str(endFastisSat - startFastisSat))
+	
+	
+	
+	if False:
+		satisfiable = True
+		#check if any strongly connected component has a variable and it's negation
+		startIsSat = time.time()
+		for vertices in SCC:
+			#check if component has any variable with it's negation
+			if len(vertices) > 1:
+				for i in range(0,len(adj),2):
+					if i in vertices and i+1 in vertices:
+						satisfiable = False
+						return None
+		endIsSat   = time.time()
+		if verbose3:
+			print('isSat Time: ' + str(endIsSat - startIsSat))
 	
 	#once it's been shown that no SCC contains a variable and it's negation,  one can find a satisfying assignment
 	#since edges are implications,  each variable in an SCC must contain the same value
@@ -228,9 +246,9 @@ def main():
 
 	verbose = False
 	verbose2 = False
-	verbose3 = True
+	verbose3 = False
 	showNaive = False
-	stressTest = True
+	stressTest = False
 	n, m = map(int, input().split())
 	clauses = [ list(map(int, input().split())) for i in range(m) ]
 	result = isSatisfiable(n,m,clauses,verbose,verbose2,verbose3)
