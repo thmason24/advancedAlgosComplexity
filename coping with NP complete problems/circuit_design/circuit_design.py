@@ -6,7 +6,7 @@ import time
 
 # This code is used to avoid stack overflow issues
 sys.setrecursionlimit(10**6) # max depth of recursion
-threading.stack_size(2**32)  # new thread will get stack of such size
+threading.stack_size(2**26)  # new thread will get stack of such size
 
 #n, m = map(int, input().split())
 #clauses = [ list(map(int, input().split())) for i in range(m) ]
@@ -48,7 +48,7 @@ def isSatisfiableNaive(n,m,clauses):
             return result
     return None
 
-def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack,satisfiable):
+def strongConnect(adj,v,SCC,sccVec,index,indexes,lowLink,onStack,stack):
 	indexes[v] = index[0]
 	lowLink[v] = index[0]
 	index[0] += 1
@@ -57,7 +57,7 @@ def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack,satisfiable):
 	#print('v top: ' + str(v))
 	for w in adj[v]:
 		if indexes[w] == -1:
-			strongConnect(adj,w,SCC,index,indexes,lowLink,onStack,stack,satisfiable)
+			strongConnect(adj,w,SCC,sccVec,index,indexes,lowLink,onStack,stack)
 			lowLink[v] = min(lowLink[v],lowLink[w])
 		elif onStack[w]:
 			lowLink[v] = min(lowLink[v],indexes[w])
@@ -67,13 +67,10 @@ def strongConnect(adj,v,SCC,index,indexes,lowLink,onStack,stack,satisfiable):
 		#start new SCC
 		#print('start new component')
 		SCC.append([])
-		innerInd = 0
 		while True:
-			#print('ind ' + str(innerInd))
-			innerInd += 1
-			#print('stack ' + str(stack))
 			w = stack.pop()
 			SCC[-1].append(w)
+			sccVec[w] = len(SCC)
 			onStack[w] = False	
 			#print('w = ' + str(w))
 			#print('v = ' + str(v))		
@@ -86,92 +83,50 @@ def tarjanSCC(adj):
 	index = [0]
 	indexes = [-1] * len(adj)
 	lowLink = [-1] * len(adj)
+	sccVec  = [-1] * len(adj)
 	onStack = [False] * len(adj)
 	stack = []
 	SCC = []
-	satisfiable = [True]
 	for i in range(len(adj)):
 		if indexes[i] == -1:
-			strongConnect(adj,i,SCC,index,indexes,lowLink,onStack,stack,satisfiable)
-	return SCC
+			strongConnect(adj,i,SCC,sccVec,index,indexes,lowLink,onStack,stack)
+	return SCC,sccVec
 		
-               
-def defineImplicationGraph(n,m,clauses,verbose,verbose2):
-	#create vertices from variables
-	#range twice n for a positive and negative of each variable
-	vertices = range(2*n)
-	#add implication edges
-	edges = []
+def fastImpGraph(n,m,clauses,verbose,verbose2):
+	adj = [[] for _ in range(2*n)]	
 	for clause in clauses:
-		#for each clause, add an edge from not u to v, and from not v to u
-		if len(clause) == 2:
-			if clause[0] > 0:
-				l1 = 2*(abs(clause[0])-1)
-				notl1 = 2*(abs(clause[0])-1)+1
-			else:
-				l1 = 2*(abs(clause[0])-1)+1
-				notl1 = 2*(abs(clause[0])-1)
-			#and for l2
-			if clause[1] > 0:
-				l2 = 2*(abs(clause[1])-1)
-				notl2 = 2*(abs(clause[1])-1)+1
-			else:
-				l2 = 2*(abs(clause[1])-1)+1
-				notl2 = 2*(abs(clause[1])-1)			
-		
-			edges.append([notl1,l2])
-			edges.append([notl2,l1])
+		if clause[0] > 0:
+			l1 = 2*(abs(clause[0])-1)
+			notl1 = 2*(abs(clause[0])-1)+1
 		else:
-			if clause[0] > 0:
-				edges.append([2*(abs(clause[0])-1)+1,2*(abs(clause[0])-1)])
-			else:
-				edges.append([2*(abs(clause[0])-1),2*(abs(clause[0])-1)+1])
-	
-	if verbose:
-		print('variables')
-		print(vertices)
-		print()
-		print('clauses')
-		for i in clauses:
-			print(i)
-			
-	if verbose2:
-		print()
-		print('edges')
-		for i in edges:
-			print(i)
-			
-	#convert to adjacency list
-	adj = [[] for _ in range(2*n)]
-	for (a, b) in edges:
-		adj[a].append(b)
-        
-	if verbose2:
-		print()
-		print('adjacency list')
-		for i in adj:
-			print(i)
+			l1 = 2*(abs(clause[0])-1)+1
+			notl1 = 2*(abs(clause[0])-1)
+		#and for l2
+		if clause[1] > 0:
+			l2 = 2*(abs(clause[1])-1)
+			notl2 = 2*(abs(clause[1])-1)+1
+		else:
+			l2 = 2*(abs(clause[1])-1)+1
+			notl2 = 2*(abs(clause[1])-1)
+		adj[notl1].append(l2)
+		adj[notl2].append(l1)
 	return adj
+		    
 				
 def isSatisfiable(n,m,clauses,verbose,verbose2,verbose3):
-	startImplication = time.time()
-	adj = defineImplicationGraph(n,m,clauses,verbose,verbose2)
-	endImplication = time.time()
+
+	startFastImp = time.time()
+	adj = fastImpGraph(n,m,clauses,verbose,verbose2)
+	endFastImp   = time.time()
 	if verbose3:
-		print('impTime: ' + str(endImplication - startImplication))
-	#sscOrder = number_of_strongly_connected_components(adj,adjr,n,m,clauses,verbose,verbose2)
+		print('fastImp : ' + str(endFastImp - startFastImp))
+		
 	startSCC = time.time()
-	SCC = tarjanSCC(adj)
+	SCC = tarjanSCC(adj)[0]
 	endSCC = time.time()
 	if verbose3:
 		print('sccTime: ' + str(endSCC - startSCC))
 								
-	if verbose:
-		print()
-		print('SCC')
-		for i in SCC:
-			print(i)
-	
 	#fast satcheck
 	startFastisSat = time.time()
 	satisfiable = True
@@ -187,27 +142,20 @@ def isSatisfiable(n,m,clauses,verbose,verbose2,verbose3):
 		print('fastisSat Time: ' + str(endFastisSat - startFastisSat))
 	
 	
-	
-	if False:
-		satisfiable = True
-		#check if any strongly connected component has a variable and it's negation
-		startIsSat = time.time()
-		for vertices in SCC:
-			#check if component has any variable with it's negation
-			if len(vertices) > 1:
-				for i in range(0,len(adj),2):
-					if i in vertices and i+1 in vertices:
-						satisfiable = False
-						return None
-		endIsSat   = time.time()
-		if verbose3:
-			print('isSat Time: ' + str(endIsSat - startIsSat))
-	
 	#once it's been shown that no SCC contains a variable and it's negation,  one can find a satisfying assignment
 	#since edges are implications,  each variable in an SCC must contain the same value
 	#in reverse topological order, assign all literals in an SCC to 1 and negations to zero
 	#move up stream in topological order and try to find a 1 implies zero
 	#in other words, check to make sure that an upstream variable does not imply it's negation downstream
+	
+	
+	startFastSol = time.time()
+	solutionVectorGraph = [-1] * len(adj)
+	for vertices in SCC:
+		unSetVertices = [i for i in vertices if solutionVectorGraph[i] == -1]	
+	endFastSol = time.time()
+	if verbose3:
+		print('fastsol : '  + str(endFastSol - startFastSol))
 	
 	startSolution = time.time()
 	solutionVectorGraph = [-1] * len(adj)
@@ -246,9 +194,9 @@ def main():
 
 	verbose = False
 	verbose2 = False
-	verbose3 = False
+	verbose3 = True
 	showNaive = False
-	stressTest = False
+	stressTest = True
 	n, m = map(int, input().split())
 	clauses = [ list(map(int, input().split())) for i in range(m) ]
 	result = isSatisfiable(n,m,clauses,verbose,verbose2,verbose3)
@@ -270,8 +218,8 @@ def main():
 		limit = 10000
 		n = np.random.randint(1, limit)
 		numClauses = np.random.randint(1, limit)
-		n= 1000000
-		numClauses = 1000000
+		n= 500000
+		numClauses = 500000
 		print()
 		print('numVar:     ' + str(n))
 		print('numClauses: ' + str(numClauses))
