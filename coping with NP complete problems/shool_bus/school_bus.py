@@ -22,22 +22,32 @@ def print_answer(path_weight, path):
 
 
 def bin2subset(n):
-	return [ind  for ind, i in enumerate(str(bin(n)[-1:1:-1])) if int(i) == 1]
+	return [ind+1  for ind, i in enumerate(str(bin(n)[-1:1:-1])) if int(i) == 1]
 
 
 def optimal_path(graph):
     n = len(graph)
     best_ans = INF
     best_path = []
-    
+    verbose = True    
     startTime = time.time()
     #data structure should be n* 2^n array
     #n=17
     size, perms = n, 2**n
-    C = [[0 for x in range(size)] for y in range(perms)] 
-    #print(Matrix)
+    filler = 0
+    C = [[filler for x in range(size)] for y in range(0,perms)] 
+    print('graph')
+    for i in graph:
+    	print(i)
+    #set graph that includes 1 and ends at 1 to length zero
     C[0][0] = 0
+    #set all other paths that end in 1 to infinity
+    for i  in range(1,2**n):
+    	C[i][0] = INF
+    #iterate through sizes of size 2 to size n
     for s in range(1,n):
+    	print()
+    	print('size ' + str(s+1))
     	sizeCounter = 0
     	sizeArray = []
     	#loop over only odd integers since only they contain vertex 1
@@ -45,51 +55,57 @@ def optimal_path(graph):
 	    	binary = bin(i)[2:]
     		numBits = binary.count('1')
     		#add all permutations of size to the current size array for processing
-    		if numBits == s:
+    		if numBits == s+1:
     			sizeCounter += 1
     			sizeArray.append(i)
-    			#set C(S,1) to infinity
-    			C[s][0] = INF    		
+    	print('sizeArray')
+    	for i in sizeArray:
+    		print(i)
     	for S in sizeArray: #iterate over subsets in sizeArray
-    		binary = bin(S)[2:]
-    		for i in range(1,n): #skip 1
+    		for i in range(1,n): #skip zeroth bit since we never want to remove 1
     			SminusI = S^(1<<i)   #this gives us the set with i removed via xor of 1 rotated i spaces anded with S 
     			if S > SminusI:  #this ensures that i is in S, or else the xor would increase the size
-    				for j in range(1,n):
-    					if i != j:
-    						C[S][i] = min(C[S][i],C[SminusI][j] + graph[i][j])    			
-    			
-    		
-    	print(sizeCounter)
+    				minimum = INF
+    				for j in range(0,n): 
+    					if i != j and S^(1<<j) < S : #need to make sure j is in S and i not equal to j
+    						#print('test')
+    						#print(graph[i][j])
+    						minimum = min(minimum,C[SminusI-1][j] + graph[j][i])  
+    						if verbose:
+    							print()
+    							print('S           ' + str(S))
+    							print('S-I         ' + str(SminusI))
+    							print('i           ' + str(i))
+    							print('j           ' + str(j))
+    							print('edge        ' + str(graph[j][i]))
+    							print('C_S_I       ' + str(C[S-1][i]))
+    							print('C_s-j       ' + str(C[SminusI-1][j]))
+    							print('C_s-j+graph ' + str(C[SminusI-1][j] + graph[j][i]))
+    							print('min   ' + str(minimum))
+    				C[S-1][i] = minimum	
+    				print('final S ' + str(bin2subset(S)))
+    				print('final i ' + str(i+1))
+    				print('final C[S,i] ' + str(minimum))		
+    	print()
+    	print('print state')	
+    	for ind,i in enumerate(C):
+    		if ind%2 == 0:
+	    		print(str(bin2subset(ind+1)) + ' ' + str(i))		
+    print()
+    print('end index')
+    for ind,i in enumerate(C):
+    	print(str(ind + 1) + ' ' + str(i))
+    #print path length
+    print()
+    print('print path length')
+    for i in range(n):
+    	print(C[2**n-2][i] + graph[i][1])
+    	
+    print()
     print('time')
     print(time.time() - startTime)    	
 
-    #print(allsubs)
-    
-        	
-    	#S = bin2subset(s)
-    	#for i in range(s):
-    		#if i != 1:
-    			#for j in range(s):
-    				#if i != j:
-    					#A = C[i]
-    					#get subset of S-{i}
-    					#B = s^(1 << i)
-    	
-    	
-    		 
-    #iterate through subsets in increasing size using conversion of integers to bits 
-    
-    #for i in range(2**n):
-    	#print(i)
-    	#convert to subset
-    	#print(bin(i))
-    	#print(bin2subset(i))
-    	#remove one bit
-    	#print()
-    	#B = i^(1 << 2)
-    	#print(B)
-    	#print(bin2subset(B))
+
 
     if best_ans == INF:
         return (-1, [])
@@ -125,6 +141,7 @@ def optimal_path_naive(graph):
 	
 
 if __name__ == '__main__':
-	print_answer(*optimal_path(read_data()))
-	#print()
-	#print_answer(*optimal_path_naive(read_data()))
+	graph = read_data()
+	print_answer(*optimal_path(graph))
+	print()
+	print_answer(*optimal_path_naive(graph))
