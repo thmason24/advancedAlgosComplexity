@@ -2,6 +2,7 @@
 from itertools import permutations
 import time
 import numpy as np
+import sys
 INF = 10 ** 9
 
 def read_data():
@@ -105,12 +106,17 @@ def optimal_path(graph):
     minPathLength = INF
     curBesti = 20
     S = 2**n-1
-    curBestj = 1
+    newS = S
+    curBestj = 0
     minPath = []
     subPathLengths = []
     for i in range(n):
+    	#print('i ' + str(i))
     	for j in range(1,n):
+    		#print('j ' + str(j))
     		if not j in minPath:
+    			#print('S ' + str(S))
+    			#print(graph[j][curBestj])
     			if C[S-1][j] + graph[j][curBestj] < minPathLength:
     				minPathLength = C[2**n-2][j] + graph[j][0]
     				curBestj = j
@@ -172,5 +178,42 @@ def optimal_path_naive(graph):
 if __name__ == '__main__':
 	graph = read_data()
 	print_answer(*optimal_path(graph))
-	#print()
-	#print_answer(*optimal_path_naive(graph))
+	print()
+	print_answer(*optimal_path_naive(graph))
+	stressTest = False
+	while stressTest:
+		limit = 5
+		n = np.random.randint(2, limit)
+		graph = [[INF] * n for _ in range(n)]
+		for i in range(n):
+			for j in range(i,n):
+				if i != j:
+					if np.random.randint(1,10) > 2:
+						graph[i][j] = np.random.randint(1, 40)
+						graph[j][i] = graph[i][j]
+		
+		best = optimal_path(graph)[0]
+		bestControl = optimal_path_naive(graph)[0]
+		if best != bestControl:
+			print()
+			print(best)
+			print(bestControl)
+			print('graph')
+			edges = []
+			for i in graph:
+				print(i)
+			for i in range(n):
+				for j in range(i,n):
+					if i != j and graph[i][j] < INF:
+						edges.append([i,j,graph[i][j]])
+						#print(str(i+1) + ' ' + str(j+1) + ' ' + str(graph[i][j]))
+			print(str(n) + ' ' + str(len(edges)))
+			for i in edges:
+				sys.stdout.write(str(i[0]+1) + ' ')
+				sys.stdout.write(str(i[1]+1) + ' ')
+				sys.stdout.write(str(i[2]) + ' ')
+				sys.stdout.write('\n')
+			break
+	
+	
+	
