@@ -29,7 +29,7 @@ def optimal_path(graph):
     n = len(graph)
     best_ans = INF
     best_path = []
-    verbose = True    
+    verbose = False
     startTime = time.time()
     #data structure should be n* 2^n array
     #n=17
@@ -98,8 +98,30 @@ def optimal_path(graph):
     #print path length
     print()
     print('print path length')
-    for i in range(n):
-    	print(C[2**n-2][i] + graph[i][1])
+    minPathLength = INF
+    for i in range(1,n):
+    	minPathLength = min(minPathLength,C[2**n-2][i] + graph[i][0])
+    	#print(C[2**n-2][i] + graph[i][0])
+    print(minPathLength)
+    
+    
+    print()
+    print('find path')
+    minPath = []
+    for i in range(n,1,-1):
+    	#find min path
+    	minPath = INF
+    	endsIn = 1
+    	for j in range(1,n):
+    		minPathLength = min(minPathLength,C[2**n-2][i] + graph[i][0])
+    		
+    		
+    
+    
+    
+    
+    
+    
     	
     print()
     print('time')
