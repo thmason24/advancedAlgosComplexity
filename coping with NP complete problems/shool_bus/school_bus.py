@@ -108,6 +108,7 @@ def optimal_path(graph):
     S = 2**n-1
     newS = S
     curBestj = 0
+    newCurBestj = 0
     minPath = []
     subPathLengths = []
     for i in range(n):
@@ -115,17 +116,24 @@ def optimal_path(graph):
     	for j in range(1,n):
     		#print('j ' + str(j))
     		if not j in minPath:
-    			#print('S ' + str(S))
-    			#print(graph[j][curBestj])
+    			if verbose:
+	    			print()
+    				print('S ' + str(S))
+    				print('j ' + str(j))
+    				print('C[S][j] ' + str(C[S-1][j]))
+    				print('minpathlen ' + str(minPathLength))
+    				print(graph[j][curBestj])
     			if C[S-1][j] + graph[j][curBestj] < minPathLength:
-    				minPathLength = C[2**n-2][j] + graph[j][0]
-    				curBestj = j
+    				minPathLength = C[S-1][j] + graph[j][curBestj]
+    				newCurBestj = j
     				newS = S^(1<<j)
     	S = newS
+    	curBestj = newCurBestj
     	minPath.append(curBestj)
     	subPathLengths.append(minPathLength)
     	if verbose:
-	    	print(minPathLength)
+    		print()
+	    	print('minpathlen ' + str(minPathLength))
     		print(curBestj)
 	    	print(bin2subset(S))
 
@@ -178,11 +186,14 @@ def optimal_path_naive(graph):
 if __name__ == '__main__':
 	graph = read_data()
 	print_answer(*optimal_path(graph))
-	print()
-	print_answer(*optimal_path_naive(graph))
-	stressTest = False
+	#print()
+	#print_answer(*optimal_path_naive(graph))
+	stressTest = True
+	testCounter = 1
 	while stressTest:
-		limit = 5
+		limit = 12
+		print('test ' + str(testCounter))
+		testCounter += 1
 		n = np.random.randint(2, limit)
 		graph = [[INF] * n for _ in range(n)]
 		for i in range(n):
